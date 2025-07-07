@@ -2776,3 +2776,708 @@ void A1(int e) {
 }
 ```
 
+Entendido. He revisado la traducción y he añadido la marca `[[[IMAGEN]]]` en cada lugar donde se menciona una figura o imagen en el texto.
+
+A continuación, la traducción completa del documento "libroRusoP2.docx" con las marcas de imagen y sin considerar el índice:
+
+-----
+
+### Implementación de Autómatas
+
+**Patrones de Implementación**
+
+Los autómatas se pueden crear y modificar fácilmente durante la ejecución del programa. Por ejemplo, tal representación es necesaria para la optimización de autómatas, que se discute en la Sección 4.4. En el contexto de esta sección, no se requiere la modificación dinámica de la estructura del autómata. Por lo tanto, para aumentar la velocidad, se debe preferir el segundo de los métodos de implementación mencionados anteriormente (utilizando una instrucción de selección), ya que es estático.
+
+La palabra clave `switch` se utiliza en C para las instrucciones de selección [44]. Otros lenguajes de programación imperativos de alto nivel tienen instrucciones similares. Las instrucciones de selección se pueden utilizar para implementar decodificadores de estados y acciones de entrada (Fig. 2.30). [[[IMAGEN]]] Como resultado, la plantilla de implementación para el ciclo de un autómata de Moore tomará la siguiente forma (Listado 2.1).
+
+**Listado 2.1. Plantilla de implementación para el ciclo de un autómata de Moore en lenguaje C (utilizando dos instrucciones de selección)**
+
+```c
+void A() {
+  switch (y) { // Decodificador de estados
+    case 1:
+      // Bloque de formación de acciones de salida
+      z1 = <0|1>; ...; zm = <0|1>;
+      switch (x) { // Decodificador de acciones de entrada
+        case 0:
+          y = <1..s>; break; // Actualización de estado
+        // ... (código omitido para brevedad)
+        case <2^n - 1>:
+          y = <1..s>; break;
+      }
+      break;
+    case 2:
+      // ... (código omitido para brevedad)
+    case <s>:
+      // ... (código omitido para brevedad)
+  }
+}
+```
+
+Con este enfoque, el autómata se describe estáticamente: su estructura está codificada en el texto del programa. Esta propiedad garantiza la velocidad requerida. Sin embargo, queda otro problema: el crecimiento exponencial de la descripción del autómata con el aumento del número de variables de entrada. De hecho, el número de etiquetas `case` en la instrucción de selección anidada, y, en consecuencia, el volumen del texto del programa, depende exponencialmente de `n` (el número de variables de entrada).
+
+Para resolver este problema, recordemos la observación hecha en relación con las tablas: en la mayoría de los casos, solo un pequeño conjunto de variables de entrada es significativo en cada estado. Por lo tanto, no es necesario especificar el valor de la función de transición para todas las posibles acciones de entrada. Como regla general, solo algunas combinaciones de valores de varias variables de entrada conducen a un cambio de estado. Aparentemente, la forma más compacta de escribir la función de transición se utiliza en la notación de grafos de transición: para cada estado se define un conjunto de transiciones salientes, marcadas con condiciones en forma de fórmulas booleanas. La experiencia muestra que en problemas reales el tamaño de estas fórmulas prácticamente no aumenta con el crecimiento del número de variables de entrada.
+
+La plantilla de implementación propuesta anteriormente se puede modificar fácilmente para utilizar una representación compacta de la función de transición. Para esto, es suficiente reemplazar la instrucción de selección interna con varias instrucciones de ramificación (según el número de arcos que salen de este estado en el grafo de transición). Las condiciones de ramificación serán las etiquetas de los arcos salientes. Tenga en cuenta que no es necesario asignar instrucciones de ramificación a los bucles en el autómata de Moore. La plantilla de implementación modificada se presenta en el Listado 2.2.
+
+**Listado 2.2. Plantilla de implementación para el ciclo de un autómata de Moore en lenguaje C (utilizando instrucciones de selección y ramificación)**
+
+```c
+void A() {
+  switch (y) { // Decodificador de estados
+    case 1:
+      // Bloque de formación de acciones de salida
+      z1 = <0|1>; ...; zm = <0|1>;
+      if (<etiqueta_1>) { // Decodificador de acciones de entrada
+        y = <1..s>; // Actualización de estado
+      } else if (<etiqueta_2>) {
+        y = <1..s>;
+      } // ... (código omitido para brevedad)
+      else if (<etiqueta_k>) {
+        y = <1..s>;
+      }
+      break;
+    case 2:
+      // ... (código omitido para brevedad)
+    case <s>:
+      // ... (código omitido para brevedad)
+  }
+}
+```
+
+La solución al problema del volumen innecesariamente grande de la representación del autómata condujo incidentalmente a otra mejora: la transformación formal del grafo de transición en código se hizo más sencilla. Sin embargo, ¿es realmente la descripción de las transiciones de estado en forma de una secuencia de instrucciones de ramificación isomorfa a la descripción en forma de un conjunto de arcos salientes? Una fuente de inconsistencia puede ser el hecho de que las instrucciones de ramificación siempre se ejecutan en el orden especificado por el texto del programa, y el orden de verificación de las condiciones en los arcos del grafo no está definido. Sin embargo, en un grafo de transición correcto (consistente), el orden de verificación de las condiciones en los arcos no importa. Si se asignan prioridades a los arcos en el grafo de transición, entonces en el texto del programa las instrucciones de ramificación correspondientes también deben estar en el orden especificado por las prioridades.
+
+Como ejemplo del uso de la plantilla considerada, presentaremos la implementación del autómata del sistema de control de válvulas, cuyo diseño se discutió en la Sección 2.1.1.
+
+**Listado 2.3. Implementación del sistema de control de válvulas en lenguaje C**
+
+```c
+void A() {
+  switch (y) {
+    case 1: // Cerrado
+      z1 = 0; z2 = 0; z3 = 0; z4 = 0;
+      if (x1) { y = 2; }
+      break;
+    case 2: // Abriendo
+      z1 = 1; z2 = 0; z3 = 0; z4 = 1;
+      if (x4 && x6) { y = 3; } else if (!x4 && x6) { y = 5; }
+      break;
+    case 3: // Abierto
+      z1 = 0; z2 = 0; z3 = 0; z4 = 0;
+      if (x2) { y = 4; }
+      break;
+    case 4: // Cerrando
+      z1 = 0; z2 = 1; z3 = 0; z4 = 1;
+      if (x5 && x6) { y = 1; } else if (!x5 && x6) { y = 5; }
+      break;
+    case 5: // Falla
+      z1 = 0; z2 = 0; z3 = 1; z4 = 0;
+      if (x3) { y = 1; }
+      break;
+  }
+}
+```
+
+Tenga en cuenta que las palabras clave `else` en esta implementación se introducen únicamente para mejorar el rendimiento del programa. Dado que las condiciones de transición de cada estado son ortogonales en este caso, las palabras clave mencionadas pueden omitirse.
+
+Anteriormente se discutió la implementación de sistemas con comportamiento complejo, controlados por un solo autómata. Pasemos a los problemas de implementación de sistemas controlados por autómatas que interactúan. En este caso, es conveniente implementar el ciclo de trabajo de cada autómata como una función separada. Si los autómatas en el sistema interactúan intercambiando números de estado, entonces las variables internas de otros autómatas, además de las variables de entrada, participarán en las condiciones de ramificación. En los bloques de formación de acciones de salida, además de las instrucciones de asignación de valores a las variables de salida, aparecerán llamadas a autómatas anidados y llamados.
+
+La llamada a un autómata anidado se realiza llamando a la función que implementa su ciclo de trabajo. La llamada a un autómata invocado es una operación más compleja. Una de las formas de implementarlo es crear una función adicional para cada autómata invocado Ai (descrito con la función `void A<i>()`), que tiene la siguiente estructura:
+
+**Listado 2.4. Plantilla de función para llamar a un autómata invocado**
+
+```c
+void Call_A<i>() {
+  y<i> = 1;
+  while (y<i> != <estado_final>) {
+    <Entrada x> Ai();
+    <Salida z>
+  }
+}
+```
+
+Después de esto, en el punto de llamada al autómata invocado, se ejecuta la función `Call_A<i>()`.
+
+Si durante el diseño del sistema se realizó una descomposición de autómatas paralela, existen dos variantes de implementación principales.
+
+1.  **Todo el sistema se ejecuta en un solo procesador.** En este caso, es necesario asegurar el trabajo pseudo-paralelo de los autómatas. Aquí se manifiesta una de las ventajas de la programación de autómatas: incluso si el entorno de ejecución no admite la multitarea, la ejecución pseudo-paralela de los autómatas se puede lograr fácilmente colocando las llamadas a sus funciones correspondientes consecutivamente en el cuerpo del ciclo del programa principal (Fig. 2.31). [[[IMAGEN]]]
+
+    **Fig. 2.31. Esquema del algoritmo que implementa el funcionamiento pseudo-paralelo de `p` autómatas activos**
+
+2.  **Cada autómata se ejecuta en un procesador separado.** En este caso, cada una de las funciones que implementan los ciclos de trabajo de los autómatas del sistema se coloca en su propio ciclo dentro de un programa principal separado. Aquí, los problemas de interacción y sincronización pasan a primer plano. En particular, es necesario garantizar la coherencia de los datos intercambiados por los autómatas en el sistema. La elección de una u otra solución a estos problemas depende de las especificidades del sistema en cuestión.
+
+Como ejemplo, presentaremos la implementación de un sistema de control de dos válvulas. De las varias opciones de arquitectura propuestas en la Sección 2.1.2, elegiremos aquella en la que se realizó una descomposición de autómatas paralela. Supongamos que el sistema debe ejecutarse en un solo procesador. El Listado 2.5 contiene las implementaciones de las funciones responsables del ciclo de trabajo de cada uno de los dos autómatas, así como la plantilla de implementación del programa principal.
+
+**Listado 2.5. Implementación del sistema de control de dos válvulas en lenguaje C**
+
+```c
+void A1() { // Autómata que controla la primera válvula
+  switch (y1) {
+    case 1: // Cerrado
+      z1 = 0; z2 = 0;
+      if (x1) { y1 = 2; } break;
+    case 2: // Abriendo
+      z1 = 1; z2 = 0;
+      if (x3) { y1 = 3; } break;
+    case 3: // Abierto
+      z1 = 0; z2 = 0;
+      if (y2 == 1) { y1 = 4; } // Asumo que el original tenía y en vez de y1 por error
+      break;
+    case 4: // Cerrando
+      z1 = 0; z2 = 1;
+      if (x4) { y1 = 1; } break;
+  }
+}
+```
+
+```c
+void A2() { // Autómata que controla la segunda válvula
+  switch (y2) {
+    case 1: // Cerrado
+      z3 = 0; z4 = 0;
+      if (y1 == 3) { y2 = 2; }
+      break;
+    case 2: // Abriendo
+      z3 = 1; z4 = 0;
+      if (x5) { y2 = 3; } break;
+    case 3: // Abierto
+      z3 = 0; z4 = 0;
+      if (x2) { y2 = 4; } break;
+    case 4: // Cerrando
+      z3 = 0; z4 = 1;
+      if (x6) { y2 = 1; } break;
+  }
+}
+```
+
+```c
+void main() { // Programa principal
+  y1 = 1; y2 = 1;
+  while (1) {
+    // <Entrada x> A1(); A2();
+    // <Salida z>
+    // En el código original, las líneas "<Entrada x>" y "<Salida z>"
+    // no son código C válido, por lo que se comentan o se eliminan
+    // en una implementación real. Aquí se dejan comentadas para referencia.
+  }
+}
+```
+
+### Otras Clases de Problemas
+
+En esta sección se abordan problemas que no pertenecen al ámbito del control lógico. En el campo de la programación de aplicaciones para computadoras personales, los sistemas con comportamiento complejo suelen ser orientados a eventos, y los objetos automatizados en ellos, como regla general, son pasivos. En cuanto a los modelos de autómatas, lo más conveniente es usar autómatas de Mealy o (con menos frecuencia) autómatas mixtos.
+
+¿Qué cambios en la estructura del algoritmo implicará esta especificidad? Dado que se utilizan otros modelos de autómatas, el bloque de formación de acciones de salida debe ubicarse de manera diferente. Los comandos del objeto de control ya no se implementan por hardware, sino por software, como procedimientos ordinarios. Por lo tanto, en el bloque de formación de acciones de salida, en lugar de asignar valores a las variables de salida, se deben colocar llamadas a procedimientos correspondientes a aquellas variables de salida que toman el valor "verdadero".
+
+Dado que los objetos automatizados considerados son pasivos, el programa principal también ha cambiado. Consideremos el esquema de algoritmo que describe un ciclo de trabajo de un autómata de Mealy (Fig. 2.32). [[[IMAGEN]]] Aquí, el bloque de formación de acciones de salida se encuentra detrás del decodificador de acciones de entrada y contiene llamadas a comandos específicos del objeto de control. El conjunto de comandos que deben ser llamados se determina por el valor de la función de salida del autómata para el estado dado y la acción de entrada.
+
+Aquí, `y` representa el estado del autómata.
+
+**Fig. 2.32. Esquema del algoritmo que implementa un ciclo de trabajo de un autómata de Mealy**
+
+Al combinar este algoritmo con el algoritmo del ciclo de trabajo del autómata de Moore de la sección anterior, obtenemos un algoritmo para un autómata mixto (Fig. 2.33), [[[IMAGEN]]] en el que hay dos bloques de formación de acciones de salida: antes y después del decodificador de acciones de entrada.
+
+Aquí, `y` representa el estado del autómata.
+
+**Fig. 2.33. Esquema del algoritmo que implementa un ciclo de trabajo de un autómata mixto**
+
+El programa principal ha cambiado mucho más. Como el lector ya sabe, un modelo de autómata pasivo no funciona continuamente (ciclo por ciclo), sino que realiza el siguiente ciclo de trabajo por iniciativa del entorno externo. Por lo tanto, para tales modelos, el programa principal ya no es parte de la implementación del autómata. Este programa describe el funcionamiento del entorno externo, y desde él, en ciertos lugares, se puede llamar a una subrutina que implementa el ciclo de trabajo del autómata. En los sistemas de eventos aplicados, la función del programa principal, como regla general, consiste en extraer mensajes de la cola y pasarlos a los controladores correspondientes. Sin embargo, esto es solo la punta del iceberg: la aplicación se ejecuta bajo el control del sistema operativo, que asume todo el trabajo de recibir eventos de dispositivos externos y pasarlos al programa. Por lo tanto, el concepto mismo de programa principal en los sistemas de software de aplicación modernos es relativo e indefinido.
+
+Además, con el paso a la programación de aplicaciones de sistemas de eventos, los criterios de optimización para la implementación de autómatas también cambiaron. El isomorfismo del código del programa al grafo de transición sigue siendo primordial, pero la eficiencia en tiempo y memoria para esta clase de problemas no es tan crítica. Por el contrario, la flexibilidad y la capacidad de evolucionar, adaptándose a nuevos requisitos, adquieren mayor importancia.
+
+Recordemos que en esta sección se discuten cuestiones de implementación en el contexto de la programación procedural. El enfoque orientado a objetos tiene un arsenal más amplio de métodos y patrones para implementar autómatas; algunos de ellos se discuten más adelante en este libro (Sección 3.3). Por ahora, nos quedamos con el lenguaje C y dos formas de implementar autómatas mencionadas anteriormente: mediante tablas y mediante instrucciones de selección.
+
+Existe una serie de tareas en las que es necesario modificar el autómata durante la ejecución del programa. Para tales casos, se debe utilizar la implementación del autómata en forma de tabla. Sin embargo, la experiencia demuestra que tales tareas son bastante raras. Por lo tanto, la plantilla de implementación más utilizada sigue siendo la descrita en la sección anterior: el uso de una instrucción de selección en combinación con una instrucción de ramificación (especialmente porque este método simplifica la transformación isomorfa del grafo de transición en código de programa).
+
+La plantilla de implementación del ciclo de trabajo del autómata ha cambiado insignificativamente en comparación con el Listado 2.2. Dado que ahora se utiliza un autómata de Mealy en lugar de un autómata de Moore, el bloque de formación de acciones de salida se ha movido dentro de la instrucción de ramificación. Además, en este bloque, en lugar de asignar valores a las variables de salida, ahora se realizan llamadas a subrutinas correspondientes a los comandos del objeto de control.
+
+Una pregunta más interesante es la interacción de la función del ciclo del autómata con el contexto que lo llama, es decir, la transmisión de eventos al autómata. Existen tres variantes principales de dicha interacción.
+
+1.  **Los eventos, al igual que las variables de entrada, son variables globales del programa o del módulo del programa en el que se encuentra el autómata** (tenga en cuenta que la segunda opción es menos probable, ya que, a diferencia de las variables de entrada, que son locales al objeto automatizado, los eventos, como regla general, están destinados a la interacción entre módulos). En el caso de que los eventos sean *exclusivos* (dos eventos no pueden ocurrir simultáneamente), para almacenar el evento actual es suficiente introducir una variable entera, cuyo valor en el decodificador de acciones de entrada se comparará con los identificadores de eventos específicos. Si los eventos en el sistema en desarrollo no tienen la propiedad de exclusividad, se puede utilizar un vector de bits para almacenar el conjunto de eventos actuales. En este caso, la representación de los eventos no difiere de la representación de las variables de entrada. La plantilla de implementación de la función de ciclo del autómata con este método de representación de eventos difiere de la descrita en el Listado 2.2 solo en la posición del bloque de formación de acciones de salida.
+
+2.  **Los eventos son argumentos de la función de ciclo del autómata.** Esta decisión de diseño refleja la diferencia entre eventos y variables de entrada: aquí el autómata *procesa* un evento (o un conjunto de eventos), mientras que los valores de las variables de entrada solo se consultan si es necesario por iniciativa propia del autómata. Además, al implementar el autómata manualmente, esta solución previene errores de programación posibles con el primer enfoque: cuando el programador olvida configurar la variable para almacenar el evento antes de llamar al ciclo del autómata. Los cambios en la plantilla de implementación en este caso son insignificantes y solo afectan la firma de la función de ciclo: `void A (int e)`, si los eventos son exclusivos; `void A (bool[] e)`, si los eventos no son exclusivos. Esta variante de implementación fue propuesta en las obras [27, 42, 46]. Una descripción de un ejemplo de su uso en la práctica se proporciona en la obra [8].
+
+3.  **A cada evento se le asocia una función separada.** Esta solución solo es adecuada para implementar un modelo de eventos exclusivo (tenga en cuenta que este modelo es el más común). Además, refleja el papel activo de los eventos, el hecho de que es la ocurrencia de un evento lo que inicia la llamada al autómata. Además, esta solución es la que mejor se adapta a la estructura tradicional de un módulo de programa en sistemas de eventos, donde cualquier parte independiente del programa es un conjunto de manejadores de eventos semánticamente relacionados. Un programa construido de acuerdo con esta solución ya no es completamente isomorfo al esquema de algoritmo de la Fig. 2.32, donde primero se decodifica el estado y luego la acción de entrada. En este caso, primero se produce la ramificación por eventos, luego por estados y, finalmente, por variables de entrada. Esto puede parecer una complicación injustificada. Sin embargo, en la mayoría de los sistemas de eventos, el entorno externo decodifica necesariamente el evento antes de enviarlo al autómata (al menos para comprender a qué autómata debe transmitirse). En este caso, al utilizar otras soluciones, la decodificación de eventos en cada ciclo ocurre dos veces sin ninguna necesidad. La plantilla de implementación de la función de ciclo para el tercer método de interacción del autómata con el entorno externo se describe en el Listado 2.6.
+
+**Listado 2.6. Plantilla de implementación para el ciclo de un autómata de Mealy en lenguaje C (a cada evento le corresponde una función separada)**
+
+```c
+void e1() {
+  switch (y) { // Decodificador de estados
+    case 1:
+      // Decodificador de conjuntos de variables de entrada
+      if (<formula_de_variables_de_entrada_1>) {
+        // Bloque de formación de acciones de salida
+        z<i_1>(); // ... (código omitido para brevedad)
+        z<i_t>();
+        y = <1..s>; // Actualización de estado
+      } else if (<formula_de_variables_de_entrada_2>) {
+        z<i_1>(); // ... (código omitido para brevedad)
+        z<i_t>();
+        y = <1..s>;
+      } // ... (código omitido para brevedad)
+      else if (<formula_de_variables_de_entrada_k>) {
+        z<i_1>(); // ... (código omitido para brevedad)
+        z<i_t>();
+        y = <1..s>;
+      }
+      break;
+    case 2:
+      // ... (código omitido para brevedad)
+    case <s>:
+      // ... (código omitido para brevedad)
+  }
+}
+```
+
+```c
+void e2() {
+  switch (y) {
+    case 1:
+      // ... (código omitido para brevedad)
+    case 2:
+      // ... (código omitido para brevedad)
+    case <s>:
+      // ... (código omitido para brevedad)
+  }
+}
+```
+
+```c
+// ... (código omitido para brevedad)
+void e<r>() {
+  switch (y) {
+    case 1:
+      // ... (código omitido para brevedad)
+    case 2:
+      // ... (código omitido para brevedad)
+    case <s>:
+      // ... (código omitido para brevedad)
+  }
+}
+```
+
+Una variante de implementación similar a la descrita anteriormente fue utilizada en la obra [47]. Consideremos las tres variantes propuestas para implementar la interacción del autómata con el entorno externo utilizando el ejemplo del reloj despertador, una entidad con un comportamiento complejo, cuyo autómata de control fue construido en la Sección 2.1.1.
+
+En el Listado 2.7, los comandos y las consultas del objeto de control del reloj despertador se implementan como funciones separadas para aumentar la modularidad, y no como parte de la implementación del autómata de control [42]. Este listado utiliza la primera de las plantillas propuestas (los eventos se describen mediante variables globales).
+
+**Listado 2.7. Implementación de un reloj despertador (eventos representados por variables globales)**
+
+```c
+const int h = 1;
+const int m = 2;
+const int a = 3;
+const int t = 4;
+
+int e; // Evento actual
+int y; // Estado de control actual
+```
+
+```c
+// Implementación del objeto de control
+int hours;
+int minutes;
+int alarm_hours;
+int alarm_minutes;
+```
+
+```c
+bool x1() {
+  if ((minutes == alarm_minutes - 1) && (hours == alarm_hours) || (alarm_minutes == 0) && (minutes == 59) && (hours == alarm_hours - 1))
+    return true;
+  else
+    return false;
+}
+```
+
+```c
+bool x2() {
+  if ((minutes == alarm_minutes) && (hours == alarm_hours))
+    return true;
+  else
+    return false;
+}
+```
+
+```c
+void z1() {
+  hours = (hours + 1) % 24;
+}
+```
+
+```c
+void z2() {
+  minutes = (minutes + 1) % 60;
+}
+```
+
+```c
+void z3() {
+  alarm_hours = (alarm_hours + 1) % 24;
+}
+```
+
+```c
+void z4() {
+  alarm_minutes = (alarm_minutes + 1) % 60;
+}
+```
+
+```c
+void z5() {
+  minutes = (minutes + 1) % 60;
+  if (minutes == 0) hours = (hours + 1) % 24;
+}
+```
+
+```c
+void z6() {
+  // ... Encender alarma
+}
+```
+
+```c
+void z7() {
+  // ... Apagar alarma
+}
+```
+
+```c
+// Implementación del autómata de control
+void A1() {
+  switch (y) {
+    case 1: // Alarma desactivada
+      if (e == h) { z1(); }
+      else if (e == m) { z2(); }
+      else if (e == a) { y = 2; }
+      else if (e == t) { z5(); } break;
+    case 2: // Configuración de la hora de la alarma
+      if (e == h) { z3(); }
+      else if (e == m) { z4(); }
+      else if (e == a) { y = 3; }
+      else if (e == t) { z5(); } break;
+    case 3: // Alarma activada
+      if (e == h) { z1(); }
+      else if (e == m) { z2(); }
+      else if (e == a) { z7(); y = 1; }
+      else if ((e == t) && x1()) { z5(); z6(); }
+      else if ((e == t) && x2()) { z5(); z7(); }
+      else if (e == t) { z5(); } break;
+  }
+}
+```
+
+El Listado 2.8 presenta la implementación del autómata de control del reloj despertador, utilizando la segunda plantilla: los eventos se pasan al autómata como argumentos. La implementación del objeto de control en este caso no difiere de la primera variante, por lo que no se incluye en el listado.
+
+**Listado 2.8. Implementación de un reloj despertador (eventos pasados como argumentos)**
+
+```c
+// Implementación del autómata de control
+void A1(int e) {
+  switch (y) {
+    case 1: // Alarma desactivada
+      if (e == h) { z1(); }
+      else if (e == m) { z2(); }
+      else if (e == a) { y = 2; }
+      else if (e == t) { z5(); }
+      break;
+    case 2: // Configuración de la hora de la alarma
+      if (e == h) { z3(); }
+      else if (e == m) { z4(); }
+      else if (e == a) { y = 3; }
+      else if (e == t) { z5(); }
+      break;
+    case 3: // Alarma activada
+      if (e == h) { z1(); }
+      else if (e == m) { z2(); }
+      else if (e == a) { z7(); y = 1; }
+      else if ((e == t) && x1()) { z5(); z6(); }
+      else if ((e == t) && x2()) { z5(); z7(); }
+      else if (e == t) { z5(); }
+      break;
+  }
+}
+```
+
+La última variante de implementación discutida anteriormente (Listado 2.6) es la más adecuada para una aplicación de escritorio. Para ilustrar su uso, presentemos una implementación del autómata del reloj despertador basada en esta plantilla (Listado 2.9). En este caso, el Listado 2.7 también presenta la implementación del objeto de control.
+
+**Listado 2.9. Implementación de un reloj despertador (cada evento tiene su propia función)**
+
+```c
+// ... (Declaraciones de variables y funciones de z1() a z7() son las mismas que en Listado 2.7)
+
+// Manejadores de eventos
+void event_h() { // Evento 'h' (horas)
+  switch (y) {
+    case 1: // Alarma desactivada
+      z1();
+      break;
+    case 2: // Configuración de la hora de la alarma
+      z3();
+      break;
+    case 3: // Alarma activada
+      z1();
+      break;
+  }
+}
+
+void event_m() { // Evento 'm' (minutos)
+  switch (y) {
+    case 1: // Alarma desactivada
+      z2();
+      break;
+    case 2: // Configuración de la hora de la alarma
+      z4();
+      break;
+    case 3: // Alarma activada
+      z2();
+      break;
+  }
+}
+
+void event_a() { // Evento 'a' (alarma)
+  switch (y) {
+    case 1: // Alarma desactivada
+      y = 2;
+      break;
+    case 2: // Configuración de la hora de la alarma
+      y = 3;
+      break;
+    case 3: // Alarma activada
+      z7();
+      y = 1;
+      break;
+  }
+}
+
+void event_t() { // Evento 't' (tiempo)
+  switch (y) {
+    case 1: // Alarma desactivada
+      z5();
+      break;
+    case 2: // Configuración de la hora de la alarma
+      z5();
+      break;
+    case 3: // Alarma activada
+      if (x1()) {
+        z5();
+        z6(); // Encender alarma
+      } else if (x2()) {
+        z5();
+        z7(); // Apagar alarma
+      } else {
+        z5();
+      }
+      break;
+  }
+}
+
+// Función principal del programa (simulando un bucle de eventos)
+void main_loop() {
+  // En un sistema real, los eventos serían generados por el SO o el usuario.
+  // Aquí, se simularía su recepción y la llamada al manejador correspondiente.
+  // Por ejemplo:
+  // while (true) {
+  //   int received_event = get_next_event();
+  //   if (received_event == h) event_h();
+  //   else if (received_event == m) event_m();
+  //   else if (received_event == a) event_a();
+  //   else if (received_event == t) event_t();
+  // }
+}
+```
+
+### 2.3. Herramientas de Programación de Autómatas
+
+En la literatura, se describen muchas herramientas para el diseño e implementación de sistemas basados en autómatas finitos. Algunos de ellos se centran en el diseño visual de autómatas [15, 23, 31, 48], algunos generan código fuente en un lenguaje de programación específico [16, 26, 35, 41, 45, 52], mientras que otros son bibliotecas de clases de autómata [14, 28, 30].
+
+En este apartado presentaremos una breve descripción de las herramientas más conocidas de este tipo.
+
+El kit de herramientas *SMC (State Machine Compiler)* [45] le permite generar automáticamente código fuente en los lenguajes de programación Ada, C, C++, C\#, Java, Objective-C, Python, Ruby, Scala y VB.Net a partir de la descripción de un autómata finito. El autómata se describe en un archivo de texto utilizando su propio lenguaje de descripción. Las principales desventajas de SMC son la falta de una interfaz visual para la construcción de autómatas y la capacidad de soportar solo el modelo de autómata de Mealy.
+
+El kit de herramientas *Ragel* [35] es un compilador de máquinas de estados. Como SMC, Ragel genera código fuente en los lenguajes de programación C, C++, C\#, D, Java, Objective-C, Go, y Ruby. El autómata se describe utilizando expresiones regulares. Las principales desventajas de Ragel son la falta de una interfaz visual para la construcción de autómatas y la falta de soporte para un número suficientemente grande de variables de entrada.
+
+El kit de herramientas *Yakindu Statechart Tools* [52] permite el diseño visual de autómatas y la generación de código fuente en los lenguajes de programación C, C++, Java y C\#. Las principales ventajas de Yakindu son la presencia de una interfaz visual, soporte para autómatas de Moore, Mealy y autómatas mixtos, la capacidad de simular el autómata y soporte para la jerarquía y paralelismo de estados. Las principales desventajas de Yakindu son el alto costo, la dificultad de uso y la falta de soporte para la composición.
+
+El kit de herramientas *QP (Quantum Platform)* [26] es una biblioteca de clases de autómata en los lenguajes de programación C y C++. Las principales ventajas de QP son la presencia de una biblioteca de clases de autómata, soporte para autómatas de Moore, Mealy y autómatas mixtos, y la capacidad de soportar la jerarquía y el paralelismo de estados. Las principales desventajas de QP son la falta de una interfaz visual para la construcción de autómatas y la dificultad de uso.
+
+El kit de herramientas *boost::statechart* [14] es una biblioteca de clases de autómata en el lenguaje de programación C++. Las principales ventajas de boost::statechart son la presencia de una biblioteca de clases de autómata y la capacidad de soportar la jerarquía y el paralelismo de estados. Las principales desventajas de boost::statechart son la falta de una interfaz visual para la construcción de autómatas y la dificultad de uso.
+
+El kit de herramientas *FSM* [28] es una biblioteca de clases de autómata en el lenguaje de programación C++. Las principales ventajas de FSM son la presencia de una biblioteca de clases de autómata y la capacidad de soportar la jerarquía y el paralelismo de estados. Las principales desventajas de FSM son la falta de una interfaz visual para la construcción de autómatas y la dificultad de uso.
+
+El kit de herramientas *State Machine Library* [30] es una biblioteca de clases de autómata en el lenguaje de programación C\#. Las principales ventajas de State Machine Library son la presencia de una biblioteca de clases de autómata y la capacidad de soportar la jerarquía y el paralelismo de estados. Las principales desventajas de State Machine Library son la falta de una interfaz visual para la construcción de autómatas y la dificultad de uso.
+
+El kit de herramientas *State Pattern* [31] es un patrón de diseño en el lenguaje de programación Java. Las principales ventajas de State Pattern son la presencia de un patrón de diseño y la capacidad de soportar la jerarquía de estados. Las principales desventajas de State Pattern son la falta de una interfaz visual para la construcción de autómatas y la dificultad de uso.
+
+El kit de herramientas *Spring State Machine* [48] es una biblioteca de clases de autómata en el lenguaje de programación Java. Las principales ventajas de Spring State Machine son la presencia de una biblioteca de clases de autómata y la capacidad de soportar la jerarquía y el paralelismo de estados. Las principales desventajas de Spring State Machine son la falta de una interfaz visual para la construcción de autómatas y la dificultad de uso.
+
+**Conclusiones de la revisión de herramientas**
+
+La revisión de las herramientas existentes mostró que la mayoría de ellas son bibliotecas de clases de autómatas o generadores de código. Las herramientas existentes no permiten el diseño visual de autómatas, no soportan la composición de autómatas, no soportan un número suficientemente grande de variables de entrada y no soportan la optimización de autómatas.
+
+En este trabajo, se propone un nuevo enfoque para la programación de autómatas, que permite superar las desventajas mencionadas anteriormente.
+
+### Capítulo 3. Programación Orientada a Objetos de Autómatas
+
+En este capítulo, se considera la implementación de sistemas basados en autómatas finitos utilizando el paradigma de programación orientada a objetos.
+
+### 3.1. Clases y Objetos
+
+El paradigma de programación orientada a objetos (POO) se basa en el concepto de "objeto", que puede contener datos, en forma de campos (a menudo conocidos como atributos), y código, en forma de procedimientos (a menudo conocidos como métodos). Una característica de los objetos es que combinan datos y procedimientos, es decir, son autocontenidos. En la mayoría de los lenguajes de programación basados en clases, los objetos son instancias de clases. Las clases sirven como planos o plantillas a partir de las cuales se crean los objetos.
+
+Las clases y los objetos permiten modelar el mundo real de manera más intuitiva. Los objetos pueden representar entidades del mundo real (por ejemplo, un coche, una persona) o conceptos abstractos (por ejemplo, una cuenta bancaria, una transacción).
+
+Los principios clave de la POO son:
+
+  * **Encapsulamiento:** Ocultación de los detalles internos de un objeto y exposición solo de la interfaz necesaria para interactuar con él.
+  * **Herencia:** Capacidad de una clase para adquirir propiedades y comportamientos de otra clase, lo que promueve la reutilización de código.
+  * **Polimorfismo:** Capacidad de objetos de diferentes clases para responder a un mismo mensaje (llamada de método) de diferentes maneras, dependiendo de su propia implementación.
+
+La POO facilita el desarrollo de software complejo al proporcionar una forma estructurada y modular de organizar el código, lo que mejora la mantenibilidad y la escalabilidad del sistema.
+
+### 3.2. Diseño por Contrato
+
+El diseño por contrato (DbC) es un enfoque para el diseño de software que se basa en la idea de que los componentes de software (por ejemplo, métodos, funciones, clases) deben especificar formalmente sus obligaciones y beneficios mutuos. Esencialmente, establece un "contrato" entre un cliente (el código que llama al componente) y un proveedor (el componente en sí).
+
+Un contrato consta de tres elementos principales:
+
+  * **Precondiciones:** Condiciones que deben ser verdaderas antes de que el cliente llame al componente. Si las precondiciones no se cumplen, es culpa del cliente.
+  * **Postcondiciones:** Condiciones que deben ser verdaderas después de que el componente haya completado su ejecución con éxito. Si las postcondiciones no se cumplen, es culpa del proveedor.
+  * **Invariantes:** Condiciones que deben ser verdaderas antes y después de cualquier llamada a un método público del objeto, manteniendo la consistencia interna del objeto.
+
+El DbC fue popularizado por Bertrand Meyer con el lenguaje de programación Eiffel. Promueve la confiabilidad, robustez y claridad del código. Al definir claramente las responsabilidades, el DbC ayuda a detectar errores en las etapas iniciales de desarrollo y facilita la depuración y el mantenimiento. Se puede implementar utilizando afirmaciones, comentarios o características de lenguaje específicas.
+
+### 3.3. Implementación de Autómatas Utilizando Programación Orientada a Objetos
+
+El paradigma orientado a objetos es muy adecuado para la programación de autómatas. Cada estado del autómata puede representarse como un objeto, y las transiciones entre estados pueden implementarse como llamadas a métodos. Esta sección explora cómo se pueden aplicar los principios de la POO para crear implementaciones flexibles y mantenibles de autómatas.
+
+Existen varios patrones de diseño que son particularmente útiles para implementar autómatas en un contexto orientado a objetos, siendo el "Patrón Estado" (State Pattern) el más directo y común.
+
+**El Patrón Estado**
+
+El Patrón Estado es un patrón de comportamiento que permite que un objeto altere su comportamiento cuando su estado interno cambia. El objeto parecerá cambiar su clase. En esencia, cada estado del autómata se encapsula en una clase separada. El objeto principal (el "contexto") contiene una referencia a un objeto de estado actual, y delega los comportamientos relacionados con el estado a este objeto de estado.
+
+Ventajas del Patrón Estado para autómatas:
+
+  * **Claridad:** Cada estado se representa explícitamente como una clase, lo que hace que el comportamiento del autómata sea más fácil de entender y depurar.
+  * **Extensibilidad:** Añadir nuevos estados o transiciones es sencillo, ya que implica añadir nuevas clases de estado o modificar las existentes sin alterar el código de otros estados.
+  * **Mantenibilidad:** El código relacionado con un estado específico se agrupa en una sola clase, lo que simplifica las modificaciones.
+
+Implementación básica:
+
+1.  **Interfaz `Estado`:** Define la interfaz común para todos los estados. Incluiría métodos para manejar los eventos o entradas que pueden ocurrir en cualquier estado.
+2.  **Clases de Estado Concretas:** Cada una implementa la interfaz `Estado` y define el comportamiento específico para ese estado. Cada método de evento dentro de una clase de estado concreta puede contener lógica para realizar acciones y/o cambiar el estado del contexto.
+3.  **Clase `Contexto`:** Mantiene una referencia a un objeto de `Estado` concreto y delega las llamadas a métodos relacionados con el estado a este objeto. También tiene un método para cambiar el estado actual.
+
+Ejemplo de pseudo-código (similar a Java/C\#):
+
+```java
+// Interfaz de Estado
+interface State {
+    void handleEvent1(Context context);
+    void handleEvent2(Context context);
+    // ... otros eventos/entradas
+}
+
+// Clase de Contexto (el autómata principal)
+class Context {
+    private State currentState;
+
+    public Context() {
+        // Estado inicial
+        this.currentState = new InitialState();
+    }
+
+    public void setState(State newState) {
+        this.currentState = newState;
+    }
+
+    public void triggerEvent1() {
+        currentState.handleEvent1(this);
+    }
+
+    public void triggerEvent2() {
+        currentState.handle2(this);
+    }
+    // ... otros disparadores de eventos
+}
+
+// Ejemplo de Clase de Estado Concreta
+class InitialState implements State {
+    @Override
+    public void handleEvent1(Context context) {
+        // Realizar acciones para Evento1 en InitialState
+        System.out.println("InitialState: Handling Event1. Transitioning to StateA.");
+        context.setState(new StateA()); // Cambiar a StateA
+    }
+
+    @Override
+    public void handleEvent2(Context context) {
+        System.out.println("InitialState: Event2 not handled here.");
+        // Opcional: permanecer en el mismo estado, o transición a un estado de error
+    }
+}
+
+class StateA implements State {
+    @Override
+    public void handleEvent1(Context context) {
+        System.out.println("StateA: Handling Event1. Staying in StateA.");
+    }
+
+    @Override
+    public void handleEvent2(Context context) {
+        System.out.println("StateA: Handling Event2. Transitioning to StateB.");
+        context.setState(new StateB());
+    }
+}
+
+class StateB implements State {
+    // ... implementación para StateB
+}
+```
+
+Este patrón no solo mejora la estructura del código, sino que también alinea el modelo de autómata más estrechamente con los principios de encapsulamiento y polimorfismo de la POO.
+
+**Otras consideraciones de la POO para autómatas:**
+
+  * **Herencia:** Puede usarse para definir jerarquías de estados si un autómata tiene estados que comparten comportamientos comunes (por ejemplo, un `EstadoAbriendo` y un `EstadoCerrando` podrían heredar de un `EstadoTransitorio` abstracto).
+  * **Composición:** En sistemas más complejos, se pueden usar múltiples autómatas (objetos `Contexto`) que interactúan entre sí, modelando la composición de autómatas.
+  * **Diseño por Contrato (DbC):** Las pre y postcondiciones pueden aplicarse a los métodos de `handleEvent` para garantizar que el autómata se comporta según lo esperado en cada transición y acción. Por ejemplo, una postcondición podría asegurar que después de una transición, el `currentState` del `Contexto` es de hecho el estado esperado.
+
+### 3.4. Programación Genética para Síntesis de Autómatas
+
+La programación genética (PG) es una técnica de optimización inspirada en la evolución biológica. Forma parte del campo más amplio de los algoritmos evolutivos. En el contexto de la síntesis de autómatas, la programación genética puede utilizarse para generar o mejorar automáticamente la estructura de autómatas finitos que resuelven un problema dado.
+
+**Conceptos clave de la Programación Genética:**
+
+  * **Individuos (Programas/Cromosomas):** En PG, los "individuos" son programas (o representaciones de programas) que intentan resolver el problema. En la síntesis de autómatas, un individuo podría ser una representación de un autómata finito (por ejemplo, una tabla de transiciones, un grafo de estados).
+  * **Población:** Un conjunto de individuos (autómatas) que se evalúan y evolucionan a lo largo del tiempo.
+  * **Función de Aptitud (Fitness Function):** Una función que mide qué tan bien un individuo (autómata) resuelve el problema. En la síntesis de autómatas, esto podría implicar probar el autómata generado con un conjunto de ejemplos de entrada/salida deseados y asignar una puntuación basada en el número de salidas correctas.
+  * **Operadores Genéticos:**
+      * **Selección:** Los individuos más aptos de la población tienen una mayor probabilidad de ser elegidos para la reproducción.
+      * **Cruce (Crossover):** Combina partes de dos individuos "padres" para crear uno o más individuos "hijos". Para autómatas, esto podría implicar intercambiar subgrafos o partes de tablas de transición.
+      * **Mutación:** Introduce pequeños cambios aleatorios en un individuo. Para autómatas, esto podría significar cambiar una transición, una acción de salida o añadir/eliminar un estado.
+
+**Proceso de Síntesis de Autómatas con PG:**
+
+1.  **Inicialización:** Crear una población inicial de autómatas aleatorios.
+2.  **Evaluación:** Para cada autómata en la población, evaluar su aptitud utilizando la función de aptitud (por ejemplo, ejecutándolo contra un conjunto de datos de prueba).
+3.  **Selección:** Seleccionar los autómatas más aptos de la población actual.
+4.  **Reproducción:** Crear una nueva generación de autómatas aplicando operadores de cruce y mutación a los autómatas seleccionados.
+5.  **Reemplazo:** Reemplazar la población antigua con la nueva generación.
+6.  **Terminación:** Repetir los pasos 2-5 hasta que se cumpla un criterio de terminación (por ejemplo, se alcanza una aptitud deseada, se excede un número máximo de generaciones, o no hay mejora significativa).
+
+**Ventajas de la PG para la síntesis de autómatas:**
+
+  * **Exploración de espacios de diseño grandes:** La PG puede explorar eficazmente un gran espacio de posibles estructuras de autómata, lo que es difícil de hacer manualmente.
+  * **Adaptación a requisitos cambiantes:** Con una función de aptitud adecuada, los autómatas pueden evolucionar para adaptarse a nuevos o modificados requisitos.
+  * **Descubrimiento de soluciones no intuitivas:** Puede encontrar soluciones que un diseñador humano no consideraría.
+
+**Desafíos:**
+
+  * **Definición de la función de aptitud:** Diseñar una función de aptitud precisa y computacionalmente eficiente es crucial.
+  * **Representación del autómata:** La forma en que se codifica un autómata en un "cromosoma" para la PG afecta la eficacia de los operadores genéticos.
+  * **Costo computacional:** La ejecución de la PG puede ser computacionalmente intensiva, especialmente para autómatas complejos o grandes poblaciones.
+
+La programación genética ofrece una poderosa metodología para la síntesis automatizada de autómatas, complementando los métodos de diseño manual y basado en herramientas.
+
